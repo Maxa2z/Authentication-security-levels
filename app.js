@@ -2,6 +2,9 @@ import express from "express";
 import ejs from "ejs";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
+// level 1 security
+import en from "mongoose-encryption";
+let secret = "qwertyuiopasdfghjklzxcvbnm";
 
 let app = express();
 let port = 3000;
@@ -14,6 +17,8 @@ let userschema = new mongoose.Schema({
     email:String,
     password:String
 });
+
+userschema.plugin(en,{ secret: secret,encryptedFields : ["password"]});
 
 let user = mongoose.model("user",userschema);
 
