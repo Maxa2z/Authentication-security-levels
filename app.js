@@ -4,7 +4,10 @@ import bodyParser from "body-parser";
 import mongoose from "mongoose";
 // level 1 security
 import en from "mongoose-encryption";
-let secret = "qwertyuiopasdfghjklzxcvbnm";
+// let secret = "qwertyuiopasdfghjklzxcvbnm";
+// level 2 security
+import env from "dotenv";
+env.config();
 
 let app = express();
 let port = 3000;
@@ -18,7 +21,8 @@ let userschema = new mongoose.Schema({
     password:String
 });
 
-userschema.plugin(en,{ secret: secret,encryptedFields : ["password"]});
+let sec = process.env.SEC;
+userschema.plugin(en,{ secret: sec,encryptedFields : ["password"]});
 
 let user = mongoose.model("user",userschema);
 
