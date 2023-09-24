@@ -11,6 +11,9 @@ import en from "mongoose-encryption";
 // level 3 security
 // import md5 from "md5";
 import md5 from "md5";
+// level 4 security
+import bcrypt, { compare, hash } from "bcrypt";
+let saltRounds = 10;
 
 let app = express();
 let port = 3000;
@@ -30,9 +33,10 @@ let userschema = new mongoose.Schema({
 let user = mongoose.model("user",userschema);
 
 app.post("/register",async(req,res)=>{
+    let hash = await bcrypt.hash(req.body.password,saltRounds);
     let newuser = new user({
         email:req.body.username,
-        password:md5(req.body.password)
+        password:hash
     });
     newuser.save();
     res.render("home.ejs");
@@ -41,9 +45,10 @@ app.post("/register",async(req,res)=>{
 
 app.post("/login",async(req,res)=>{
     let email = req.body.username;
-    let password = md5(req.body.password);
+    let password = req.body.password;
     let user1 = await user.findOne({email:email});
-    if(user1.password === password){
+    let result = await bcrypt.compare(password,user1.password);
+    if(result === true){
         res.render("secrets.ejs");
     }
     else{
