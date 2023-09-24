@@ -6,8 +6,11 @@ import mongoose from "mongoose";
 import en from "mongoose-encryption";
 // let secret = "qwertyuiopasdfghjklzxcvbnm";
 // level 2 security
-import env from "dotenv";
-env.config();
+// import env from "dotenv";
+// env.config();
+// level 3 security
+// import md5 from "md5";
+import md5 from "md5";
 
 let app = express();
 let port = 3000;
@@ -21,15 +24,15 @@ let userschema = new mongoose.Schema({
     password:String
 });
 
-let sec = process.env.SEC;
-userschema.plugin(en,{ secret: sec,encryptedFields : ["password"]});
+// let sec = process.env.SEC;
+// userschema.plugin(en,{ secret: sec,encryptedFields : ["password"]});
 
 let user = mongoose.model("user",userschema);
 
 app.post("/register",async(req,res)=>{
     let newuser = new user({
         email:req.body.username,
-        password:req.body.password
+        password:md5(req.body.password)
     });
     newuser.save();
     res.render("home.ejs");
@@ -38,7 +41,7 @@ app.post("/register",async(req,res)=>{
 
 app.post("/login",async(req,res)=>{
     let email = req.body.username;
-    let password = req.body.password;
+    let password = md5(req.body.password);
     let user1 = await user.findOne({email:email});
     if(user1.password === password){
         res.render("secrets.ejs");
