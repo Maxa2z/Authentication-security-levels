@@ -1,25 +1,29 @@
-import express from "express";
-import ejs from "ejs";
-import bodyParser from "body-parser";
-import mongoose from "mongoose";
-// level 1 security
-import en from "mongoose-encryption";
-// let secret = "qwertyuiopasdfghjklzxcvbnm";
-// level 2 security
-// import env from "dotenv";
-// env.config();
-// level 3 security
-// import md5 from "md5";
-import md5 from "md5";
-// level 4 security
-import bcrypt, { compare, hash } from "bcrypt";
-let saltRounds = 10;
+const express = require("express");
+const ejs = require("ejs");
+const bodyParser = require("body-parser");
+const mongoose = require("mongoose");
+const session = require("express-session");
+const passport = require("passport");
+const passportLocalMongoose = require("passport-local-mongoose");
+// npm i passport-local
+
 
 let app = express();
 let port = 3000;
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.static("public"));
+
+app.use(session({
+    secret : "qwertyuiopasdfghjklzxcvbnm",
+    resave : false,
+    saveUninitialized : false
+}));
+
+
+app.use(passport.initialize());
+app.use(passport.session());
+
 mongoose.connect("mongodb://127.0.0.1:27017/userdb");
 
 let userschema = new mongoose.Schema({
@@ -27,35 +31,45 @@ let userschema = new mongoose.Schema({
     password:String
 });
 
-// let sec = process.env.SEC;
-// userschema.plugin(en,{ secret: sec,encryptedFields : ["password"]});
+userschema.plugin(passportLocalMongoose);
+
 
 let user = mongoose.model("user",userschema);
 
+passport.use(user.createStrategy());
+passport.serializeUser(user.serializeUser());
+passport.deserializeUser(user.deserializeUser());
+
 app.post("/register",async(req,res)=>{
-    let hash = await bcrypt.hash(req.body.password,saltRounds);
-    let newuser = new user({
-        email:req.body.username,
-        password:hash
+    
+    user.register({username:req.body.username},req.body.password,(err,user)=>{
+        if(err){
+            console.log(err);
+            res.redirect("/register");
+        }
+        else{
+            res.redirect("/");
+        }
     });
-    newuser.save();
-    res.render("home.ejs");
 });
 
 
 app.post("/login",async(req,res)=>{
-    let email = req.body.username;
-    let password = req.body.password;
-    let user1 = await user.findOne({email:email});
-    let result = await bcrypt.compare(password,user1.password);
-    if(result === true){
-        res.render("secrets.ejs");
-    }
-    else{
-        res.render("login",{
-            error : "Invalid username or password"
-        });
-    }
+    let newuser= new user({
+        username:req.body.username,
+        password:req.body.password
+    });
+    req.login(newuser,(err)=>{
+        if(err){
+            // console.log(err);
+            req.redirect("/login");
+        }
+        else{
+            passport.authenticate("local")(req,res,()=>{
+                res.redirect("/secrets");
+            });
+        }
+    });
 });
 
 app.get("/",(req,res)=>{
@@ -68,7 +82,18 @@ app.get("/login",(req,res)=>{
     res.render("login.ejs");
 });
 app.get("/secrets",(req,res)=>{
-    res.render("secrets.ejs");
+    if(req.isAuthenticated()){
+        res.render("secrets.ejs",{username:req.user.username});
+    }
+    else{
+        res.redirect("/login");
+    }
+});
+app.get("/logout",(req,res)=>{
+        req.logout(function(err) {
+          if (err) { return next(err); }
+          res.redirect('/');
+        });
 });
 
 
